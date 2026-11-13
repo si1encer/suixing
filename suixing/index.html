@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4efe5">
+  <meta name="description" content="随行：可以不按计划走的旅行清单。">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>随行 · 旅行不赶路</title>
+</head>
+<body>
+  <div class="desktop-stage" aria-hidden="true">
+    <span class="desktop-note desktop-note--top">PLAN LESS · WANDER MORE</span>
+    <span class="desktop-note desktop-note--bottom">去吹风，去吃一碗热腾腾的面。</span>
+  </div>
+
+  <div class="app-shell">
+    <header class="topbar" id="topbar">
+      <button class="icon-button" id="backButton" type="button" aria-label="返回" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <button class="brand" type="button" data-nav="home" aria-label="回到首页">
+        <span class="brand-mark">随</span>
+        <span class="brand-copy"><b>随行</b><small>旅行不赶路</small></span>
+      </button>
+      <div class="topbar-title" id="topbarTitle" hidden></div>
+      <button class="avatar-button" type="button" data-nav="profile" aria-label="打开数据与设置">
+        <span>L</span><i></i>
+      </button>
+    </header>
+
+    <main id="appMain">
+      <section class="view view--active" id="homeView" aria-labelledby="homeHeading">
+        <div class="home-intro">
+          <p class="eyebrow" id="todayLabel">TRAVEL NOTES</p>
+          <h1 id="homeHeading">下一站，<br><em>留一点空白。</em></h1>
+          <p class="intro-copy">先放进想去的地方，出发后再决定今天要做什么。</p>
+        </div>
+
+        <div id="featuredTrip"></div>
+
+        <div class="quick-actions" aria-label="快捷操作">
+          <button type="button" data-action="new-trip" class="quick-action">
+            <span class="quick-icon quick-icon--coral">＋</span>
+            <span><b>新建行程</b><small>从一张车票开始</small></span>
+          </button>
+          <button type="button" data-nav="discover" class="quick-action">
+            <span class="quick-icon quick-icon--yellow">⌕</span>
+            <span><b>搜点灵感</b><small>全网找吃和玩</small></span>
+          </button>
+        </div>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">MY JOURNEYS</p>
+              <h2>我们的旅行</h2>
+            </div>
+            <button class="text-button" type="button" id="manageTripsButton">管理</button>
+          </div>
+          <div class="filter-row" id="tripFilters" role="tablist" aria-label="筛选行程">
+            <button class="filter-chip filter-chip--active" type="button" data-filter="all" role="tab" aria-selected="true">全部</button>
+            <button class="filter-chip" type="button" data-filter="upcoming" role="tab" aria-selected="false">计划中</button>
+            <button class="filter-chip" type="button" data-filter="past" role="tab" aria-selected="false">已归档</button>
+          </div>
+          <div class="trip-grid" id="tripGrid"></div>
+        </section>
+
+        <div class="home-bottom-note">
+          <span>计划只是草稿</span>
+          <span>玩得开心才算数</span>
+        </div>
+      </section>
+
+      <section class="view" id="tripView" aria-labelledby="tripHeading" hidden></section>
+
+      <section class="view" id="discoverView" aria-labelledby="discoverHeading" hidden>
+        <div class="subpage-heading">
+          <p class="eyebrow">SEARCH & COLLECT</p>
+          <h1 id="discoverHeading">去外面找点<br><em>好玩的。</em></h1>
+          <p>看到心动的地方，搜完就能放进行程。</p>
+        </div>
+
+        <form class="search-box" id="discoverSearchForm">
+          <span aria-hidden="true">⌕</span>
+          <input id="discoverSearchInput" type="search" placeholder="搜景点、美食、酒店…" autocomplete="off">
+          <button type="submit">搜索</button>
+        </form>
+
+        <section class="section-block discover-section">
+          <div class="section-heading">
+            <div><p class="eyebrow">QUICK FIND</p><h2>按需要去找</h2></div>
+          </div>
+          <div class="discover-grid">
+            <a class="discover-card discover-card--food" data-search-link="food" href="#" target="_blank" rel="noopener">
+              <span class="discover-emoji">面</span>
+              <b>本地人吃什么</b>
+              <small>大众点评 / 小红书</small>
+            </a>
+            <a class="discover-card discover-card--hotel" data-search-link="hotel" href="#" target="_blank" rel="noopener">
+              <span class="discover-emoji">住</span>
+              <b>找间好住不贵</b>
+              <small>携程 / 飞猪</small>
+            </a>
+            <a class="discover-card discover-card--event" data-search-link="event" href="#" target="_blank" rel="noopener">
+              <span class="discover-emoji">闹</span>
+              <b>最近有什么活动</b>
+              <small>活动 / 市集 / 展览</small>
+            </a>
+            <a class="discover-card discover-card--map" data-search-link="map" href="#" target="_blank" rel="noopener">
+              <span class="discover-emoji">路</span>
+              <b>看看地图路线</b>
+              <small>高德地图</small>
+            </a>
+          </div>
+        </section>
+
+        <section class="section-block">
+          <div class="section-heading">
+            <div><p class="eyebrow">ON THE LIST</p><h2>顺手收藏</h2></div>
+            <span class="count-label" id="ideaCount">0 个灵感</span>
+          </div>
+          <div class="idea-list" id="ideaList"></div>
+        </section>
+
+        <div class="search-tip">
+          <span class="search-tip-icon">↗</span>
+          <div><b>搜到了好地方？</b><p>点“做成行程卡”，把名称、价格和网页链接一起记下来。</p></div>
+        </div>
+      </section>
+
+      <section class="view" id="footprintsView" aria-labelledby="footprintsHeading" hidden>
+        <div class="subpage-heading">
+          <p class="eyebrow">LITTLE MOMENTS</p>
+          <h1 id="footprintsHeading">走过的地方，<br><em>都算数。</em></h1>
+          <p>完成打卡后，照片和当时的心情会收进这里。</p>
+        </div>
+        <div class="memory-stats" id="memoryStats"></div>
+        <div class="memory-list" id="memoryList"></div>
+      </section>
+
+      <section class="view" id="profileView" aria-labelledby="profileHeading" hidden>
+        <div class="subpage-heading">
+          <p class="eyebrow">YOUR LITTLE ARCHIVE</p>
+          <h1 id="profileHeading">把旅行，<br><em>好好收起来。</em></h1>
+          <p>可以只保存在手机里，也可以和 TA 实时共享同一份行程。</p>
+        </div>
+        <div class="profile-card">
+          <div class="profile-monogram">L&Y</div>
+          <div><b>我们的随行册</b><p id="profileSummary">—</p></div>
+        </div>
+        <div class="settings-list">
+          <button class="setting-row" type="button" id="cloudSyncButton">
+            <span class="setting-icon setting-icon--cloud">☁</span>
+            <span><b>情侣云端同步</b><small id="syncStatusText">未开启 · 点击连接免费共享空间</small></span>
+            <span class="sync-state-dot" id="syncStateDot"></span>
+            <span class="chevron">›</span>
+          </button>
+          <button class="setting-row" type="button" id="exportButton">
+            <span class="setting-icon">↓</span>
+            <span><b>导出旅行备份</b><small>下载一份可恢复的数据文件</small></span>
+            <span class="chevron">›</span>
+          </button>
+          <label class="setting-row setting-row--file">
+            <span class="setting-icon">↑</span>
+            <span><b>导入旅行备份</b><small>在另一台手机恢复行程与照片</small></span>
+            <span class="chevron">›</span>
+            <input type="file" id="importInput" accept="application/json">
+          </label>
+          <button class="setting-row" type="button" id="installButton">
+            <span class="setting-icon">＋</span>
+            <span><b>添加到手机桌面</b><small>像 App 一样打开，支持离线</small></span>
+            <span class="chevron">›</span>
+          </button>
+        </div>
+        <div class="privacy-note">
+          <b>关于数据</b>
+          <p>默认只保存在本机。开启情侣同步后，共享行程和照片会上传到你的 Supabase 免费项目，并通过成员权限隔离。</p>
+        </div>
+        <div class="app-version">随行 · 1.1 · MADE FOR SLOW TRIPS</div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" id="bottomNav" aria-label="主导航">
+      <button class="nav-button nav-button--active" type="button" data-nav="home">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.8 12 3l9 7.8v9.7H3z"/><path d="M9 20.5v-6h6v6"/></svg>
+        <span>旅行</span>
+      </button>
+      <button class="nav-button" type="button" id="currentTripNav" data-nav="trip">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v3M18 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/><path d="m9 14 2 2 4-4"/></svg>
+        <span>清单</span>
+      </button>
+      <button class="nav-button" type="button" data-nav="discover">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6"/></svg>
+        <span>找灵感</span>
+      </button>
+      <button class="nav-button" type="button" data-nav="footprints">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7a5.3 5.3 0 0 0-8.8-3.9 5.3 5.3 0 0 0-8.8 3.9c0 6.1 8.8 11.2 8.8 11.2s8.8-5.1 8.8-11.2Z"/><circle cx="12" cy="8" r="2"/></svg>
+        <span>足迹</span>
+      </button>
+    </nav>
+  </div>
+
+  <div class="modal-layer" id="modalLayer" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <section class="modal-sheet" id="modalSheet" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="sheet-handle"></div>
+      <button class="sheet-close" type="button" data-close-modal aria-label="关闭">×</button>
+      <div id="modalContent"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="confirm-dialog" id="confirmDialog">
+    <h2 id="confirmTitle">确认操作</h2>
+    <p id="confirmMessage"></p>
+    <div class="confirm-actions">
+      <button class="button button--ghost" type="button" id="confirmCancel">再想想</button>
+      <button class="button button--danger" type="button" id="confirmAccept">确认</button>
+    </div>
+  </dialog>
+
+  <script src="./app.js"></script>
+  <script src="./vendor/supabase.js"></script>
+  <script src="./sync.js"></script>
+</body>
+</html>
