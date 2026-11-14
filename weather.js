@@ -3,14 +3,19 @@
 (() => {
   const WEATHER_CACHE_KEY = "suixing-weather-cache-v1";
   const GEOCODE_CACHE_KEY = "suixing-geocode-cache-v1";
+  const DISTRICT_DATA_URL = "./data/china-districts.json";
   const CACHE_MS = 30 * 60 * 1000;
   const weatherCache = loadCache(WEATHER_CACHE_KEY);
   const geocodeCache = loadCache(GEOCODE_CACHE_KEY);
   const pendingRenders = new Set();
+  let districtDataPromise = null;
+  let districtRecords = [];
 
   window.SuixingWeather = {
     chipMarkup,
-    refresh
+    refresh,
+    prepareRegionOptions,
+    validateStayRegion
   };
 
   document.addEventListener("click", (event) => {
@@ -25,6 +30,7 @@
   });
 
   window.setTimeout(refresh, 0);
+  loadDistrictData().catch((error) => console.warn("Could not load district data.", error));
 
   function chipMarkup(trip, day, date, index) {
     return `<button class="weather-chip weather-chip--loading" type="button" data-weather-day-index="${Number(index)}"><span class="weather-chip-icon">☁</span><span class="weather-chip-text">天气</span></button>`;
@@ -131,6 +137,26 @@
   async function resolveWeatherRegion(trip, day, stays) {
     if (isValidRegion(day.weatherRegion)) return { ...day.weatherRegion, source: "manual" };
     const stay = stays[0];
+    if (stay && Number.isFinite(Number(stay.regionLatitude)) && Number.isFinite(Number(stay.regionLongitude))) {
+      return {
+        name: stay.regionName || stay.address || stay.name,
+        latitude: Number(stay.regionLatitude),
+        longitude: Number(stay.regionLongitude),
+        source: "hotel-district",
+        stayId: stay.id
+      };
+    }
+    if (stay?.regionName) {
+      await loadDistrictData();
+      const district = findDistrictByName(stay.regionName);
+      if (district) {
+        return {
+          ...districtToRegion(district),
+          source: "hotel-district",
+          stayId: stay.id
+        };
+      }
+    }
     const areaName = inferWeatherArea(stay, trip);
     if (!areaName) return null;
     const cached = getCache(geocodeCache, areaName.toLowerCase());
@@ -195,9 +221,86 @@
     );
   }
 
+  async function validateStayRegion(value) {
+    const query = String(value || "").trim();
+    if (!query) return null;
+    await loadDistrictData();
+    const exact = findDistrictByName(query);
+    if (exact) return {
+      name: exact.label,
+      latitude: exact.latitude,
+      longitude: exact.longitude,
+      adcode: exact.adcode
+    };
+    if (/[区县旗]$/.test(query)) return null;
+    try {
+      const fallback = await geocodeArea(query);
+      if (!fallback) return null;
+      return {
+        name: fallback.displayName,
+        latitude: fallback.latitude,
+        longitude: fallback.longitude,
+        adcode: ""
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function prepareRegionOptions() {
+    const datalist = document.getElementById("chinaDistrictOptions");
+    if (!datalist || datalist.dataset.ready === "true") return;
+    try {
+      await loadDistrictData();
+      const sorted = districtRecords.slice().sort((a, b) =>
+        `${a.province}${a.city}${a.district}`.localeCompare(`${b.province}${b.city}${b.district}`, "zh-CN")
+      );
+      datalist.innerHTML = sorted.map((district) =>
+        `<option value="${escapeAttr(district.label)}">${escapeHtml(`${district.province} ${district.city}`)}</option>`
+      ).join("");
+      datalist.dataset.ready = "true";
+    } catch (error) {
+      console.warn("Could not prepare district options.", error);
+    }
+  }
+
+  async function loadDistrictData() {
+    if (districtRecords.length) return districtRecords;
+    if (!districtDataPromise) {
+      districtDataPromise = fetchJson(DISTRICT_DATA_URL).then((payload) => {
+        districtRecords = Array.isArray(payload.records) ? payload.records : [];
+        return districtRecords;
+      });
+    }
+    return districtDataPromise;
+  }
+
+  function findDistrictByName(value) {
+    const normalized = normalizeRegionText(value);
+    if (!normalized) return null;
+    const exact = districtRecords.filter((district) => normalizeRegionText(district.label) === normalized);
+    if (exact.length === 1) return exact[0];
+    const byDistrict = districtRecords.filter((district) => normalizeRegionText(district.district) === normalized);
+    return byDistrict.length === 1 ? byDistrict[0] : null;
+  }
+
+  function normalizeRegionText(value) {
+    return String(value || "").replace(/[\s·/\\-]/g, "").toLowerCase();
+  }
+
+  function districtToRegion(district) {
+    return {
+      name: district.label,
+      latitude: district.latitude,
+      longitude: district.longitude,
+      adcode: district.adcode,
+      source: "district"
+    };
+  }
+
   function openWeatherRegionPicker(trip, day, date, dayIndex, stays) {
     const stay = stays[0];
-    const defaultArea = inferWeatherArea(stay, trip) || "行程目的地";
+    const defaultArea = stay?.regionName || inferWeatherArea(stay, trip) || "行程目的地";
     const manualRegion = isValidRegion(day.weatherRegion) ? day.weatherRegion : null;
     const defaultLabel = stay ? `${stay.name} · ${defaultArea}` : defaultArea;
     openModal(`
@@ -210,11 +313,11 @@
         <span>⌂</span><div><b>使用默认地区</b><small>${escapeHtml(defaultLabel)}</small></div>
       </button>
       <form class="weather-search-form" id="weatherSearchForm">
-        <label class="field"><span>搜索城市或地区</span><input name="query" value="${escapeAttr(manualRegion?.name || defaultArea)}" placeholder="例如：泉州市、厦门、京都" required></label>
+        <label class="field"><span>搜索区县或城市</span><input name="query" value="${escapeAttr(manualRegion?.name || defaultArea)}" placeholder="例如：鲤城区、思明区、京都" required></label>
         <button class="button button--primary" type="submit">搜索</button>
       </form>
       <div class="weather-results" id="weatherSearchResults"></div>
-      <p class="weather-attribution">天气与地点数据由 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> 提供，仅供旅行参考。</p>
+      <p class="weather-attribution">天气由 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> 提供；中国区县中心点来自 DataV 行政区划数据，仅供旅行参考。</p>
     `, () => {
       document.getElementById("useDefaultWeatherArea").addEventListener("click", () => {
         delete day.weatherRegion;
@@ -232,11 +335,23 @@
         const results = document.getElementById("weatherSearchResults");
         results.innerHTML = `<div class="weather-search-status">正在查找地区…</div>`;
         try {
-          const params = new URLSearchParams({ name: query, count: "10", language: "zh", format: "json" });
-          const response = await fetchJson(`https://geocoding-api.open-meteo.com/v1/search?${params}`);
-          const places = (response.results || []).map(normalizeGeocodeResult);
+          await loadDistrictData();
+          const districtMatches = searchDistrictRecords(query, 12);
+          let places = districtMatches.map((district) => ({
+            name: district.district,
+            displayName: district.label,
+            latitude: district.latitude,
+            longitude: district.longitude,
+            adcode: district.adcode,
+            source: "district"
+          }));
           if (!places.length) {
-            results.innerHTML = `<div class="weather-search-status">没有找到这个地区，试试城市名或邮编。</div>`;
+            const params = new URLSearchParams({ name: query, count: "10", language: "zh", format: "json" });
+            const response = await fetchJson(`https://geocoding-api.open-meteo.com/v1/search?${params}`);
+            places = (response.results || []).map(normalizeGeocodeResult);
+          }
+          if (!places.length) {
+            results.innerHTML = `<div class="weather-search-status">没有找到这个地区，试试完整的区县名称。</div>`;
             return;
           }
           results.innerHTML = places.map((place, index) => `
@@ -252,6 +367,7 @@
                 name: place.displayName,
                 latitude: place.latitude,
                 longitude: place.longitude,
+                adcode: place.adcode || "",
                 source: "manual"
               };
               notifyCloudMutation("upsert_trip", trip.id);
@@ -267,6 +383,29 @@
         }
       });
     });
+  }
+
+  function searchDistrictRecords(query, limit = 10) {
+    const normalized = normalizeRegionText(query);
+    if (!normalized) return [];
+    return districtRecords
+      .map((district) => {
+        const districtName = normalizeRegionText(district.district);
+        const cityName = normalizeRegionText(district.city);
+        const provinceName = normalizeRegionText(district.province);
+        const label = normalizeRegionText(district.label);
+        let score = 0;
+        if (districtName === normalized) score = 100;
+        else if (districtName.startsWith(normalized)) score = 80;
+        else if (label.includes(normalized)) score = 60;
+        else if (cityName === normalized) score = 50;
+        else if (provinceName === normalized) score = 30;
+        return { district, score };
+      })
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.district.adcode.localeCompare(b.district.adcode))
+      .slice(0, limit)
+      .map((item) => item.district);
   }
 
   function weatherMeta(code) {

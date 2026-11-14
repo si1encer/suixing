@@ -38,6 +38,7 @@
 - `trip.stays` 为可选住宿数组，旧行程缺失时按空数组兼容；住宿不写入 `activities`。
 - 酒店类历史活动必须保留显示和编辑能力，但新建普通计划时不再创建酒店活动。
 - `day.weatherRegion` 是可选手动天气地区，缺失时根据住宿自动推断。
+- `stay.regionName` 为住宿必填地区；`regionLatitude`、`regionLongitude` 和 `regionAdcode` 用于稳定定位区县天气。
 - 天气结果属于短期缓存，不得写入或同步到 Supabase；只有手动天气地区进入旅行数据。
 - 天气更新不得阻塞行程渲染，API 失败时保留“重试”状态。
 - 照片本地可以是压缩后的 data URL，云端使用私有 Storage 路径。

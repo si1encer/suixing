@@ -36,6 +36,10 @@ const seedData = {
           id: "qz-stay-1",
           name: "西街小院酒店",
           address: "泉州市鲤城区西街附近",
+          regionName: "鲤城区 · 泉州市 · 福建省",
+          regionLatitude: 24.907645,
+          regionLongitude: 118.588929,
+          regionAdcode: "350502",
           startDate: "2026-12-31",
           endDate: "2027-01-03",
           note: "示例住宿，可在住宿模块中修改"
@@ -129,6 +133,10 @@ const seedData = {
           id: "hz-stay-1",
           name: "西湖边精品酒店",
           address: "杭州市西湖风景区附近",
+          regionName: "西湖区 · 杭州市 · 浙江省",
+          regionLatitude: 30.272934,
+          regionLongitude: 120.147376,
+          regionAdcode: "330106",
           startDate: "2026-10-01",
           endDate: "2026-10-05",
           note: ""
@@ -575,7 +583,8 @@ function renderStayOverview(trip) {
           <article class="stay-overview-card">
             <div class="stay-overview-top"><span>住</span><small>${escapeHtml(formatStayDateRange(stay))}</small></div>
             <h3>${escapeHtml(stay.name)}</h3>
-            <p>${escapeHtml(stay.address || "地址待补充")}</p>
+            <p>${escapeHtml(stay.regionName || stay.address || "地区待补充")}</p>
+            ${stay.regionName && stay.address ? `<small class="stay-overview-address">${escapeHtml(stay.address)}</small>` : ""}
             <div class="stay-card-actions">
               <button type="button" data-action="edit-stay" data-stay-id="${escapeAttr(stay.id)}">编辑</button>
               <a href="${escapeAttr(getMapUrl(stay.address || stay.name))}" target="_blank" rel="noopener">地图</a>
@@ -599,7 +608,7 @@ function renderDayStayInfo(stays, date, dayIndex) {
       const status = getStayDayStatus(stay, date);
       return `<button class="day-stay-card" type="button" data-action="edit-stay" data-stay-id="${escapeAttr(stay.id)}">
         <span class="day-stay-icon">住</span>
-        <span class="day-stay-copy"><small>${status}</small><b>${escapeHtml(stay.name)}</b><em>${escapeHtml(stay.address || "地址待补充")}</em></span>
+        <span class="day-stay-copy"><small>${status}</small><b>${escapeHtml(stay.name)}</b><em title="${escapeAttr(stay.address || "")}">${escapeHtml(stay.regionName || stay.address || "地区待补充")}</em></span>
         <span class="activity-arrow">›</span>
       </button>`;
     }).join("")}
@@ -1107,7 +1116,7 @@ function openAddTrip() {
         });
       }
     });
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(form);
       const startDate = String(data.get("startDate"));
@@ -1165,6 +1174,8 @@ function openStayEditor(stayId = null, dayIndex = -1) {
     <form id="stayForm" class="form-grid">
       <label class="field"><span>酒店名称</span><input name="name" value="${escapeAttr(stay?.name || "")}" placeholder="例如：西街小院酒店" required maxlength="50"></label>
       <label class="field"><span>酒店地址</span><input name="address" value="${escapeAttr(stay?.address || "")}" placeholder="用于每天定位和路线起点" required maxlength="120"></label>
+      <label class="field"><span>所在地区（省 / 市 / 区县）</span><input name="regionName" list="chinaDistrictOptions" value="${escapeAttr(stay?.regionName || "")}" placeholder="例如：鲤城区 · 泉州市 · 福建省" required maxlength="80"></label>
+      <datalist id="chinaDistrictOptions"></datalist>
       <div class="form-row">
         <label class="field"><span>入住日期</span><input type="date" name="startDate" value="${escapeAttr(stay?.startDate || toYmd(defaultStart))}" required></label>
         <label class="field"><span>退房日期</span><input type="date" name="endDate" value="${escapeAttr(stay?.endDate || toYmd(defaultEnd))}" required></label>
@@ -1176,7 +1187,7 @@ function openStayEditor(stayId = null, dayIndex = -1) {
       </div>
     </form>`, () => {
     const form = document.getElementById("stayForm");
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(form);
       const startDate = String(data.get("startDate"));
@@ -1185,9 +1196,19 @@ function openStayEditor(stayId = null, dayIndex = -1) {
         showToast("退房日期不能早于入住日期");
         return;
       }
+      const regionInput = String(data.get("regionName")).trim();
+      const validatedRegion = await window.SuixingWeather?.validateStayRegion(regionInput);
+      if (!validatedRegion) {
+        showToast("请从地区建议中选择“省 / 市 / 区县”，确保天气预报定位准确");
+        return;
+      }
       const values = {
         name: String(data.get("name")).trim(),
         address: String(data.get("address")).trim(),
+        regionName: validatedRegion.name,
+        regionLatitude: validatedRegion.latitude,
+        regionLongitude: validatedRegion.longitude,
+        regionAdcode: validatedRegion.adcode || "",
         startDate,
         endDate,
         note: String(data.get("note")).trim()
@@ -1200,6 +1221,7 @@ function openStayEditor(stayId = null, dayIndex = -1) {
       saveAndRefresh();
       showToast(stay ? "住宿信息已更新" : "住宿已加入每天的行程");
     });
+    window.SuixingWeather?.prepareRegionOptions();
   });
 }
 
