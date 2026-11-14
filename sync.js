@@ -696,13 +696,13 @@
     }
     const suggestedCode = syncGenerateInviteCode();
     openModal(`
-      <div class="sheet-heading"><h2>把两份计划连起来</h2><p>由一个人创建空间，再把邀请码发给另一个人。邀请码最长可以随时更换。</p></div>
+      <div class="sheet-heading"><h2>把几台设备连起来</h2><p>由一个人创建空间，再把邀请码发给 TA 或自己的另一台设备。邀请码可以随时更换。</p></div>
       <div class="sync-error" id="pairingError"></div>
       <div class="pair-grid">
         <div class="pair-card">
           <span class="sync-badge">先开始的一方</span>
           <h3>创建共享空间</h3>
-          <p>会把这台手机上已有的行程一起上传。</p>
+          <p>会把这台设备上已有的行程一起上传。</p>
           <form id="createCoupleForm" class="form-grid">
             <label class="field"><span>空间名称</span><input name="name" value="我们的旅行" maxlength="48" required></label>
             <label class="field"><span>邀请码</span><input name="code" value="${escapeAttr(suggestedCode)}" minlength="8" maxlength="24" pattern="[A-Za-z0-9-]{8,24}" required></label>
@@ -712,7 +712,7 @@
         <div class="pair-card pair-card--join">
           <span class="sync-badge">加入的一方</span>
           <h3>使用 TA 的邀请码</h3>
-          <p>加入后会先拉取云端行程，本机原来的内容会留一份备份。</p>
+          <p>手机、平板或电脑都能用同一个邀请码加入，本机原来的内容会留一份备份。</p>
           <form id="joinCoupleForm" class="form-grid">
             <label class="field"><span>邀请码</span><input name="code" placeholder="例如 SUI-AB12CD" minlength="8" maxlength="24" required></label>
             <button class="button button--primary button--wide" type="submit">加入共享空间</button>
@@ -794,7 +794,7 @@
       <div class="sheet-heading"><h2>${justCreated ? "共享空间建好了" : "情侣云端同步"}</h2><p>${justCreated ? "把邀请码发给 TA，让另一半加入同一份行程。" : "你们现在编辑的是同一份旅行清单。"}</p></div>
       <div class="sync-hero">
         <span class="sync-hero-icon">✓</span>
-        <div><b>${escapeHtml(syncState.coupleName)}</b><p id="syncConnectedStatus">${escapeHtml(statusText)} · ${syncState.memberCount || 1}/2 位成员</p></div>
+        <div><b>${escapeHtml(syncState.coupleName)}</b><p id="syncConnectedStatus">${escapeHtml(statusText)} · ${syncState.memberCount || 1}/6 台设备</p></div>
       </div>
       <div>
         <span class="field-label">发给 TA 的邀请码</span>
@@ -929,8 +929,8 @@
     if (/invite|邀请码/i.test(message) && /exist|不存在/i.test(message)) {
       return "邀请码不存在，请检查后重新输入。";
     }
-    if (/已有两位成员|two|2/i.test(message) && /member|成员/i.test(message)) {
-      return "这个旅行空间已经有两位成员了。";
+    if (/6 台设备|6.*device|member.*limit/i.test(message)) {
+      return "这个共享空间已经达到 6 台设备上限。可以在 Supabase Table Editor 中删除不再使用的设备记录。";
     }
     if (/fetch|network|Failed to fetch/i.test(message)) {
       return "无法连接 Supabase。请检查网络、Project URL 和项目是否处于暂停状态。";
