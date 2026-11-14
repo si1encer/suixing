@@ -523,8 +523,8 @@ function renderDaySection(trip, day, index, busyDays) {
     <section class="day-section" aria-label="第 ${index + 1} 天">
       <div class="itinerary-heading">
         <div class="day-heading-copy">
-          <div class="day-meta-row">
-            <p class="eyebrow">DAY ${index + 1} · ${escapeHtml(formatMonthDay(date))}</p>
+          <div class="day-context-row">
+            <div class="day-date-block"><span>DAY ${index + 1}</span><b>${escapeHtml(formatMonthDay(date))}</b></div>
             ${window.SuixingWeather?.chipMarkup(trip, day, date, index, stays) || `<button class="weather-chip weather-chip--loading" type="button" data-weather-day-index="${index}"><span>☁</span>天气</button>`}
           </div>
           <h2 class="day-heading-title">${escapeHtml(displayTitle)}</h2>

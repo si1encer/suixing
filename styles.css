@@ -2114,6 +2114,35 @@ svg {
   width: 100%;
 }
 
+.day-context-row {
+  display: flex;
+  min-height: 35px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.day-date-block {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.day-date-block span {
+  color: var(--coral);
+  font-family: Georgia, serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.day-date-block b {
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 15px;
+  font-weight: 600;
+}
+
 .day-meta-row {
   display: flex;
   align-items: center;
@@ -2132,23 +2161,25 @@ svg {
 .weather-chip {
   display: inline-flex;
   flex: 0 0 auto;
-  min-height: 25px;
+  min-height: 33px;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin-left: auto;
-  padding: 4px 8px;
-  border: 1px solid rgba(73, 101, 88, 0.14);
+  padding: 5px 10px;
+  border: 1px solid rgba(73, 101, 88, 0.2);
   border-radius: 999px;
-  background: rgba(255, 253, 248, 0.8);
-  color: var(--ink-soft);
-  font-size: 8px;
+  background: rgba(245, 230, 185, 0.58);
+  box-shadow: 0 4px 12px rgba(73, 101, 88, 0.07);
+  color: var(--green-dark);
+  font-size: 9px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
 .weather-chip--ready {
-  border-color: rgba(230, 187, 83, 0.27);
-  background: rgba(245, 230, 185, 0.52);
-  color: #69572d;
+  border-color: rgba(230, 187, 83, 0.42);
+  background: linear-gradient(135deg, rgba(245, 230, 185, 0.92), rgba(248, 239, 205, 0.82));
+  color: #5f4d25;
 }
 
 .weather-chip--loading {
@@ -2160,12 +2191,22 @@ svg {
 }
 
 .weather-chip--muted {
+  background: rgba(255, 253, 248, 0.65);
   color: var(--ink-soft);
 }
 
 .weather-chip-icon {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1;
+}
+
+.weather-chip-place {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.weather-chip-text {
+  font-family: Georgia, "PingFang SC", sans-serif;
 }
 
 @keyframes weather-loading {

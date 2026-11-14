@@ -49,18 +49,19 @@
     const date = addDays(trip.startDate, index);
     const dateKey = toYmd(date);
     const stayOffset = daysBetween(startOfDay(new Date()), startOfDay(date));
+    const stays = getStaysForDate(trip, date);
+    const region = await resolveWeatherRegion(trip, day, stays);
+    const placeLabel = region ? shortWeatherPlace(region) : "";
 
     if (stayOffset < 0) {
-      setChipState(button, "muted", "☁", "已过去", "当天天气仅供出发前参考");
+      setChipState(button, "muted", "☁", "已过去", "当天天气仅供出发前参考", placeLabel);
       return;
     }
     if (stayOffset > 15) {
-      setChipState(button, "muted", "☁", "待更新", "天气预报将在出发前 16 天内显示");
+      setChipState(button, "muted", "☁", "待更新", "天气预报将在出发前 16 天内显示", placeLabel);
       return;
     }
 
-    const stays = getStaysForDate(trip, date);
-    const region = await resolveWeatherRegion(trip, day, stays);
     if (!region) {
       setChipState(button, "muted", "☁", "选地区", "选择天气地区后显示预报");
       return;
@@ -76,7 +77,7 @@
     const renderKey = `${trip.id}:${index}:${cacheKey}`;
     if (pendingRenders.has(renderKey)) return;
     pendingRenders.add(renderKey);
-    setChipState(button, "loading", "☁", "天气");
+    setChipState(button, "loading", "☁", "天气", "", placeLabel);
     try {
       const params = new URLSearchParams({
         latitude: String(region.latitude),
@@ -89,7 +90,7 @@
       const response = await fetchJson(`https://api.open-meteo.com/v1/forecast?${params}`);
       const daily = response.daily;
       if (!daily?.time?.length) {
-        setChipState(button, "muted", "☁", "待更新", "暂时没有这一天的天气预报");
+        setChipState(button, "muted", "☁", "待更新", "暂时没有这一天的天气预报", placeLabel);
         return;
       }
       const data = {
@@ -108,13 +109,23 @@
   function renderForecastChip(button, data, region) {
     const weather = weatherMeta(data.code);
     const detail = `${region.name} · ${weather.label} · 最高 ${data.high}° / 最低 ${data.low}° · 降水概率 ${Number.isFinite(data.rain) ? data.rain : 0}%`;
-    setChipState(button, "ready", weather.icon, `${data.high}°/${data.low}°`, detail);
+    setChipState(button, "ready", weather.icon, `${data.high}°/${data.low}°`, detail, shortWeatherPlace(region));
   }
 
-  function setChipState(button, state, icon, text, title = "") {
+  function setChipState(button, state, icon, text, title = "", location = "") {
     button.className = `weather-chip weather-chip--${state}`;
     button.title = title;
-    button.innerHTML = `<span class="weather-chip-icon">${icon}</span><span class="weather-chip-text">${escapeHtml(text)}</span>`;
+    button.innerHTML = `
+      <span class="weather-chip-icon">${icon}</span>
+      ${location ? `<span class="weather-chip-place">${escapeHtml(location)}</span>` : ""}
+      <span class="weather-chip-text">${escapeHtml(text)}</span>`;
+  }
+
+  function shortWeatherPlace(region) {
+    return String(region?.name || "")
+      .split(" · ")[0]
+      .replace(/市$/, "")
+      .trim();
   }
 
   async function resolveWeatherRegion(trip, day, stays) {
