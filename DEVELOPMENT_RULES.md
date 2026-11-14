@@ -34,5 +34,7 @@
 - `state.trips` 为用户行程根数组。
 - 行程中的 `activities` 保留本地关系。
 - 云端 `trips.payload` 和 `activities.payload` 使用向后兼容 JSON。
-- `day.titleMode` 缺失时按旧版自定义标题处理；`titleMode: "auto"` 时根据活动自动生成标题。
+- 旧行程中的 `day.title` 和 `day.titleMode` 必须原样保留，但 1.4 之后的显示标题统一由计划地点和数量生成。
+- `trip.stays` 为可选住宿数组，旧行程缺失时按空数组兼容；住宿不写入 `activities`。
+- 酒店类历史活动必须保留显示和编辑能力，但新建普通计划时不再创建酒店活动。
 - 照片本地可以是压缩后的 data URL，云端使用私有 Storage 路径。

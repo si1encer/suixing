@@ -31,6 +31,16 @@ const seedData = {
       startDate: "2026-12-31",
       endDate: "2027-01-03",
       theme: "coast",
+      stays: [
+        {
+          id: "qz-stay-1",
+          name: "西街小院酒店",
+          address: "泉州市鲤城区西街附近",
+          startDate: "2026-12-31",
+          endDate: "2027-01-03",
+          note: "示例住宿，可在住宿模块中修改"
+        }
+      ],
       days: [
         { title: "抵达 · 老城散步", note: "不赶景点，从一碗面线糊开始。" },
         { title: "簪花 · 去看海", note: "早点出门，把下午留给海边。" },
@@ -114,6 +124,16 @@ const seedData = {
       startDate: "2026-10-01",
       endDate: "2026-10-05",
       theme: "autumn",
+      stays: [
+        {
+          id: "hz-stay-1",
+          name: "西湖边精品酒店",
+          address: "杭州市西湖风景区附近",
+          startDate: "2026-10-01",
+          endDate: "2026-10-05",
+          note: ""
+        }
+      ],
       days: [
         { title: "西湖边见面", note: "" },
         { title: "进山喝茶", note: "" },
@@ -256,6 +276,7 @@ function migrateState(data) {
     trips: data.trips.map((trip) => ({
       ...trip,
       theme: THEMES[trip.theme] ? trip.theme : "forest",
+      stays: Array.isArray(trip.stays) ? trip.stays : [],
       days: Array.isArray(trip.days) ? trip.days : [],
       activities: (trip.activities || []).map((activity) => ({
         status: "todo",
@@ -463,6 +484,7 @@ function renderTrip() {
       <div class="overview-cell"><strong>${stats.ideas}</strong><span>灵感池</span></div>
     </div>
     <button class="trip-cloud-chip" id="tripCloudChip" type="button">☁ 仅保存在本机 · 点击开启共享</button>
+    ${renderStayOverview(trip)}
     <div class="flex-note"><span>✽</span><p>计划是草稿。睡过头、玩累了，随时把项目换一天。</p></div>
     <div class="day-tabs" role="tablist" aria-label="选择日期">${dayTabs}</div>
     <div class="itinerary-heading">
@@ -484,8 +506,9 @@ function renderDaySection(trip, day, index, busyDays) {
   const activities = trip.activities
     .filter((item) => item.day === index)
     .sort((a, b) => sortTime(a.time) - sortTime(b.time));
-  const displayTitle = getDayDisplayTitle(day, activities);
-  const canEditDay = ui.currentDay !== "all";
+  const planActivities = activities.filter((item) => item.category !== "酒店");
+  const stays = getStaysForDate(trip, date);
+  const displayTitle = getDayDisplayTitle(trip, date, planActivities, stays);
   const cards = activities.length
     ? activities.map(activityCardMarkup).join("") + `
       <button class="add-activity-row" type="button" data-action="add-activity" data-day="${index}">＋ 给这一天加一件事</button>`
@@ -501,48 +524,175 @@ function renderDaySection(trip, day, index, busyDays) {
         <div class="day-heading-copy">
           <div class="day-meta-row">
             <p class="eyebrow">DAY ${index + 1} · ${escapeHtml(formatMonthDay(date))}</p>
-            <span class="day-plan-count">${activities.length ? `${activities.length} 件事` : "可随时添加"}</span>
-            ${canEditDay ? `<button class="day-edit-title" type="button" data-action="edit-day" data-day="${index}">改标题</button>` : ""}
           </div>
           <h2 class="day-heading-title">${escapeHtml(displayTitle)}</h2>
           ${day.note ? `<p class="day-note-line">${escapeHtml(day.note)}</p>` : ""}
         </div>
       </div>
+      ${renderDayStayInfo(stays, date, index)}
+      ${renderRoutePreview(trip, date, planActivities, stays)}
       <div class="timeline">${cards}</div>
     </section>`;
 }
 
-function getDayDisplayTitle(day, activities) {
-  const placeholders = new Set(["", "没有计划的一天", "留白的一天", "计划留白"]);
-  const customTitle = String(day.title || "").trim();
-  if (day.titleMode !== "auto" && customTitle && !placeholders.has(customTitle)) {
-    return customTitle;
-  }
-  return deriveDayTitle(activities);
-}
-
-function deriveDayTitle(activities) {
-  if (!activities.length) return "留白的一天";
-  const meaningful = activities.filter((item) => item.category !== "交通");
-  const pool = meaningful.length ? meaningful : activities;
-  const labels = [];
-  for (const activity of pool) {
-    let label = String(activity.title || "")
-      .replace(/[（(][^）)]*[）)]/g, "")
-      .replace(/\s*[+＋]\s*/g, " · ")
-      .trim();
-    label = label.split(" · ")[0].trim();
-    if (label && !labels.includes(label)) labels.push(label);
-    if (labels.length === 2) break;
-  }
-  if (!labels.length) return "今天的安排";
-  if (labels.length === 1) return truncateTitle(labels[0], 14);
-  return `${truncateTitle(labels[0], 6)} · ${truncateTitle(labels[1], 6)}`;
+function getDayDisplayTitle(trip, date, activities, stays = getStaysForDate(trip, date)) {
+  if (!activities.length) return "今日留白";
+  const firstLocatedPlan = activities.find((item) => String(item.location || "").trim());
+  const stay = stays[0];
+  const fallbackLocation = stay ? (stay.address || stay.name) : "";
+  const location = String(firstLocatedPlan?.location || fallbackLocation || "地点待补充").trim();
+  return `【${truncateTitle(location, 12)}】附近等${activities.length}个计划`;
 }
 
 function truncateTitle(value, maxLength) {
   const text = String(value || "").trim();
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
+function getTripStays(trip) {
+  return Array.isArray(trip.stays) ? trip.stays : [];
+}
+
+function getStaysForDate(trip, date) {
+  const ymd = toYmd(date);
+  return getTripStays(trip)
+    .filter((stay) => stay.startDate <= ymd && stay.endDate >= ymd)
+    .sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
+}
+
+function renderStayOverview(trip) {
+  const stays = getTripStays(trip).slice().sort((a, b) => String(a.startDate).localeCompare(String(b.startDate)));
+  return `
+    <section class="stay-overview">
+      <div class="stay-overview-heading">
+        <div><p class="eyebrow">WHERE WE STAY</p><h2>住宿安排</h2></div>
+        <button type="button" data-action="add-stay" data-day="${ui.currentDay === "all" ? -1 : Number(ui.currentDay)}">＋ 添加住宿</button>
+      </div>
+      ${stays.length
+        ? `<div class="stay-card-row">${stays.map((stay) => `
+          <article class="stay-overview-card">
+            <div class="stay-overview-top"><span>住</span><small>${escapeHtml(formatStayDateRange(stay))}</small></div>
+            <h3>${escapeHtml(stay.name)}</h3>
+            <p>${escapeHtml(stay.address || "地址待补充")}</p>
+            <div class="stay-card-actions">
+              <button type="button" data-action="edit-stay" data-stay-id="${escapeAttr(stay.id)}">编辑</button>
+              <a href="${escapeAttr(getMapUrl(stay.address || stay.name))}" target="_blank" rel="noopener">地图</a>
+            </div>
+          </article>`).join("")}</div>`
+        : `<button class="stay-overview-empty" type="button" data-action="add-stay" data-day="${ui.currentDay === "all" ? -1 : Number(ui.currentDay)}">
+            <span>＋</span><b>还没有住宿安排</b><small>选择酒店、地址和入住日期，每天会自动显示。</small>
+          </button>`}
+    </section>`;
+}
+
+function renderDayStayInfo(stays, date, dayIndex) {
+  if (!stays.length) {
+    return `<div class="day-stay-empty">
+      <span>住</span><p>这一天还没安排住宿</p>
+      <button type="button" data-action="add-stay" data-day="${dayIndex}">＋ 添加</button>
+    </div>`;
+  }
+  return `<div class="day-stay-list">
+    ${stays.map((stay) => {
+      const status = getStayDayStatus(stay, date);
+      return `<button class="day-stay-card" type="button" data-action="edit-stay" data-stay-id="${escapeAttr(stay.id)}">
+        <span class="day-stay-icon">住</span>
+        <span class="day-stay-copy"><small>${status}</small><b>${escapeHtml(stay.name)}</b><em>${escapeHtml(stay.address || "地址待补充")}</em></span>
+        <span class="activity-arrow">›</span>
+      </button>`;
+    }).join("")}
+  </div>`;
+}
+
+function getStayDayStatus(stay, date) {
+  const ymd = toYmd(date);
+  if (stay.startDate === ymd && stay.endDate === ymd) return "今日住宿";
+  if (stay.startDate === ymd) return "今日入住";
+  if (stay.endDate === ymd) return "今日退房";
+  return "今晚住这里";
+}
+
+function formatStayDateRange(stay) {
+  const start = parseDate(stay.startDate);
+  const end = parseDate(stay.endDate);
+  return `${start.getMonth() + 1}.${start.getDate()} — ${end.getMonth() + 1}.${end.getDate()}`;
+}
+
+function renderRoutePreview(trip, date, activities, stays) {
+  const startStay = stays[0];
+  if (!startStay) {
+    return `<section class="route-preview route-preview--empty">
+      <div><span class="route-empty-icon">⌖</span><b>路线预览</b><p>先添加当天住宿，再按计划时间生成从酒店出发的路线。</p></div>
+      <button type="button" data-action="add-stay" data-day="${Math.max(daysBetween(parseDate(trip.startDate), date), 0)}">添加住宿</button>
+    </section>`;
+  }
+
+  const locatedActivities = activities.filter((activity) => String(activity.location || "").trim());
+  const uniqueStops = [];
+  const seen = new Set();
+  const startLocation = String(startStay.address || startStay.name || "").trim();
+  [{ type: "stay", stay: startStay, location: startLocation }].forEach((stop) => {
+    seen.add(stop.location.toLocaleLowerCase());
+    uniqueStops.push(stop);
+  });
+  locatedActivities.forEach((activity) => {
+    const location = activity.location.trim();
+    const key = location.toLocaleLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniqueStops.push({ type: "plan", activity, location });
+    }
+  });
+
+  const routeNodes = uniqueStops.slice(0, 6);
+  const coords = routeNodes.map((_, index) => {
+    if (routeNodes.length === 1) return { x: 50, y: 45 };
+    const x = 12 + index * (76 / (routeNodes.length - 1));
+    const yPattern = [54, 27, 58, 30, 52, 25];
+    return { x, y: yPattern[index] };
+  });
+  const path = coords.reduce((value, point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = coords[index - 1];
+    const midX = (previous.x + point.x) / 2;
+    return `${value} C ${midX} ${previous.y}, ${midX} ${point.y}, ${point.x} ${point.y}`;
+  }, "");
+  const missingLocations = activities.length - locatedActivities.length;
+
+  return `<section class="route-preview">
+    <div class="route-preview-heading">
+      <div><p class="eyebrow">TODAY'S ROUTE</p><h3>今日路线</h3></div>
+      <span>按计划时间排序</span>
+    </div>
+    <div class="route-map-schematic">
+      <svg class="route-map-path" viewBox="0 0 100 70" preserveAspectRatio="none" aria-hidden="true">
+        <path class="route-road route-road--a" d="M -5 18 C 25 2, 48 30, 105 12"></path>
+        <path class="route-road route-road--b" d="M 8 72 C 30 42, 66 67, 104 38"></path>
+        <path class="route-line" d="${escapeAttr(path)}"></path>
+      </svg>
+      <span class="route-map-compass">N ↑</span>
+      ${routeNodes.map((stop, index) => `
+        <span class="route-map-node ${stop.type === "stay" ? "route-map-node--stay" : ""}" style="left:${coords[index].x}%;top:${coords[index].y}%">
+          ${stop.type === "stay" ? "宿" : index}
+        </span>`).join("")}
+      ${uniqueStops.length > routeNodes.length ? `<span class="route-map-more">+${uniqueStops.length - routeNodes.length}</span>` : ""}
+    </div>
+    <ol class="route-stop-list">
+      <li>
+        <span class="route-stop-index route-stop-index--stay">宿</span>
+        <div><b>${escapeHtml(startStay.name)}</b><small>${escapeHtml(startLocation || "住宿地点待补充")} · 出发</small></div>
+        <a href="${escapeAttr(getMapUrl(startLocation || startStay.name))}" target="_blank" rel="noopener">地图</a>
+      </li>
+      ${locatedActivities.map((activity, index) => `
+        <li>
+          <span class="route-stop-index">${index + 1}</span>
+          <div><b>${escapeHtml(activity.title)}</b><small>${escapeHtml(activity.time || "时间待定")} · ${escapeHtml(activity.location)}</small></div>
+          <a href="${escapeAttr(getMapUrl(activity.location))}" target="_blank" rel="noopener">地图</a>
+        </li>`).join("")}
+    </ol>
+    ${missingLocations ? `<p class="route-warning">还有 ${missingLocations} 个计划没有填写地点，暂未加入路线。</p>` : ""}
+    <p class="route-footnote">顺序预览用于检查是否顺路；点击地点可在地图 App 中查看。</p>
+  </section>`;
 }
 
 function renderUnscheduled(trip) {
@@ -842,8 +992,14 @@ function handleDocumentClick(event) {
     case "edit-trip":
       openEditTrip(selectedTripId);
       break;
-    case "edit-day":
-      openEditDay(Number(actionTarget.dataset.day));
+    case "add-stay":
+      openStayEditor(null, Number(actionTarget.dataset.day ?? -1));
+      break;
+    case "edit-stay":
+      openStayEditor(actionTarget.dataset.stayId);
+      break;
+    case "delete-stay":
+      requestDeleteStay(actionTarget.dataset.stayId);
       break;
     case "add-activity":
       openAddActivity({
@@ -990,41 +1146,73 @@ function createTrip(data) {
       note: "",
       titleMode: "auto"
     })),
+    stays: [],
     activities: []
   };
 }
 
-function openEditDay(dayIndex) {
+function openStayEditor(stayId = null, dayIndex = -1) {
   const trip = findTrip(selectedTripId);
-  const day = trip?.days?.[dayIndex];
-  if (!trip || !day) return;
-  const activities = trip.activities.filter((item) => item.day === dayIndex);
-  const automaticTitle = deriveDayTitle(activities);
+  if (!trip) return;
+  trip.stays = getTripStays(trip);
+  const stay = stayId ? trip.stays.find((item) => item.id === stayId) : null;
+  const defaultStart = dayIndex >= 0 ? addDays(trip.startDate, dayIndex) : parseDate(trip.startDate);
+  const defaultEnd = dayIndex >= 0 ? addDays(defaultStart, 1) : parseDate(trip.endDate);
   openModal(`
-    <div class="sheet-heading"><h2>第 ${dayIndex + 1} 天的标题</h2><p>留空时会根据当天的活动自动生成，设置后则优先显示你的标题。</p></div>
-    <form id="editDayForm" class="form-grid">
-      <label class="field"><span>简短标题</span><input name="title" value="${escapeAttr(day.titleMode === "auto" ? "" : day.title || "")}" placeholder="${escapeAttr(automaticTitle)}" maxlength="18"></label>
-      <label class="field"><span>补充说明（可选）</span><textarea name="note" maxlength="120" placeholder="一句话就够，例如：下午留给海边">${escapeHtml(day.note || "")}</textarea></label>
+    <div class="sheet-heading"><h2>${stay ? "编辑住宿" : "添加住宿"}</h2><p>住宿会独立显示在每一天和路线预览里，不再作为普通计划。</p></div>
+    <form id="stayForm" class="form-grid">
+      <label class="field"><span>酒店名称</span><input name="name" value="${escapeAttr(stay?.name || "")}" placeholder="例如：西街小院酒店" required maxlength="50"></label>
+      <label class="field"><span>酒店地址</span><input name="address" value="${escapeAttr(stay?.address || "")}" placeholder="用于每天定位和路线起点" required maxlength="120"></label>
+      <div class="form-row">
+        <label class="field"><span>入住日期</span><input type="date" name="startDate" value="${escapeAttr(stay?.startDate || toYmd(defaultStart))}" required></label>
+        <label class="field"><span>退房日期</span><input type="date" name="endDate" value="${escapeAttr(stay?.endDate || toYmd(defaultEnd))}" required></label>
+      </div>
+      <label class="field"><span>住宿备注（可选）</span><textarea name="note" maxlength="160" placeholder="例如：含早餐、前台电话、停车方式">${escapeHtml(stay?.note || "")}</textarea></label>
       <div class="form-actions">
-        <button class="button button--ghost" type="button" data-close-modal>取消</button>
-        <button class="button button--primary" type="submit">保存标题</button>
+        ${stay ? `<button class="button button--ghost" type="button" data-action="delete-stay" data-stay-id="${escapeAttr(stay.id)}">删除</button>` : `<button class="button button--ghost" type="button" data-close-modal>取消</button>`}
+        <button class="button button--primary" type="submit">${stay ? "保存住宿" : "添加住宿"}</button>
       </div>
     </form>`, () => {
-    const form = document.getElementById("editDayForm");
+    const form = document.getElementById("stayForm");
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       const data = new FormData(form);
-      const title = String(data.get("title")).trim();
-      day.title = title;
-      day.titleMode = title ? "custom" : "auto";
-      day.note = String(data.get("note")).trim();
+      const startDate = String(data.get("startDate"));
+      const endDate = String(data.get("endDate"));
+      if (parseDate(endDate) < parseDate(startDate)) {
+        showToast("退房日期不能早于入住日期");
+        return;
+      }
+      const values = {
+        name: String(data.get("name")).trim(),
+        address: String(data.get("address")).trim(),
+        startDate,
+        endDate,
+        note: String(data.get("note")).trim()
+      };
+      if (stay) Object.assign(stay, values);
+      else trip.stays.push({ id: makeId("stay"), ...values });
       notifyCloudMutation("upsert_trip", trip.id);
       persist();
       closeModal();
       saveAndRefresh();
-      showToast(title ? "当天标题已更新" : "已改为根据活动自动生成");
+      showToast(stay ? "住宿信息已更新" : "住宿已加入每天的行程");
     });
   });
+}
+
+async function requestDeleteStay(stayId) {
+  const trip = findTrip(selectedTripId);
+  const stay = getTripStays(trip).find((item) => item.id === stayId);
+  if (!trip || !stay) return;
+  const confirmed = await showConfirm("删除这条住宿？", `“${stay.name}”会从住宿安排和每日路线中移除。`, "删除住宿");
+  if (!confirmed) return;
+  trip.stays = trip.stays.filter((item) => item.id !== stayId);
+  notifyCloudMutation("upsert_trip", trip.id);
+  persist();
+  closeModal();
+  saveAndRefresh();
+  showToast("住宿安排已删除");
 }
 
 function openEditTrip(tripId) {
@@ -1132,8 +1320,8 @@ function openAddActivity({ day = -1, tripId = null, prefillName = "", fromSearch
       <label class="field"><span>想做什么</span><input name="title" value="${escapeAttr(prefillName)}" placeholder="例如：西街吃一碗面线糊" required maxlength="60"></label>
       <div class="field">
         <span class="field-label">类别</span>
-        <div class="category-options">
-          ${Object.entries(CATEGORY).map(([name, info], index) => `
+        <div class="category-options category-options--plans">
+          ${Object.entries(CATEGORY).filter(([name]) => name !== "酒店").map(([name, info], index) => `
             <label class="category-option ${index === 0 ? "category-option--active" : ""}">
               <input type="radio" name="category" value="${name}" ${index === 0 ? "checked" : ""} hidden><b>${info.icon}</b>${name}
             </label>`).join("")}
@@ -1442,11 +1630,11 @@ function getActivityPhotoSrc(photo) {
 }
 
 function getTripStats(trip) {
-  const scheduled = trip.activities.filter((item) => item.day >= 0);
+  const scheduled = trip.activities.filter((item) => item.day >= 0 && item.category !== "酒店");
   return {
     total: scheduled.length,
-    done: trip.activities.filter((item) => item.status === "done").length,
-    ideas: trip.activities.filter((item) => item.day === -1 && item.status !== "done").length,
+    done: trip.activities.filter((item) => item.status === "done" && item.category !== "酒店").length,
+    ideas: trip.activities.filter((item) => item.day === -1 && item.status !== "done" && item.category !== "酒店").length,
     dayCount: Math.max(daysBetween(parseDate(trip.startDate), parseDate(trip.endDate)) + 1, 1)
   };
 }
