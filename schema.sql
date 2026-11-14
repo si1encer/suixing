@@ -252,8 +252,8 @@ begin
   from public.couple_members
   where couple_id = found_couple_id;
 
-  if current_member_count >= 2 then
-    raise exception '这个旅行空间已经有两位成员';
+  if current_member_count >= 6 then
+    raise exception '这个共享空间已经达到 6 台设备上限';
   end if;
 
   insert into public.couple_members (user_id, couple_id, role)

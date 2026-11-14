@@ -484,6 +484,8 @@ function renderDaySection(trip, day, index, busyDays) {
   const activities = trip.activities
     .filter((item) => item.day === index)
     .sort((a, b) => sortTime(a.time) - sortTime(b.time));
+  const displayTitle = getDayDisplayTitle(day, activities);
+  const canEditDay = ui.currentDay !== "all";
   const cards = activities.length
     ? activities.map(activityCardMarkup).join("") + `
       <button class="add-activity-row" type="button" data-action="add-activity" data-day="${index}">＋ 给这一天加一件事</button>`
@@ -496,10 +498,51 @@ function renderDaySection(trip, day, index, busyDays) {
   return `
     <section class="day-section" aria-label="第 ${index + 1} 天">
       <div class="itinerary-heading">
-        <div><p class="eyebrow">DAY ${index + 1} · ${escapeHtml(formatMonthDay(date))}</p><h2>${escapeHtml(day.title || "留白的一天")}</h2>${day.note ? `<p>${escapeHtml(day.note)}</p>` : ""}</div>
+        <div class="day-heading-copy">
+          <div class="day-meta-row">
+            <p class="eyebrow">DAY ${index + 1} · ${escapeHtml(formatMonthDay(date))}</p>
+            <span class="day-plan-count">${activities.length ? `${activities.length} 件事` : "可随时添加"}</span>
+            ${canEditDay ? `<button class="day-edit-title" type="button" data-action="edit-day" data-day="${index}">改标题</button>` : ""}
+          </div>
+          <h2 class="day-heading-title">${escapeHtml(displayTitle)}</h2>
+          ${day.note ? `<p class="day-note-line">${escapeHtml(day.note)}</p>` : ""}
+        </div>
       </div>
       <div class="timeline">${cards}</div>
     </section>`;
+}
+
+function getDayDisplayTitle(day, activities) {
+  const placeholders = new Set(["", "没有计划的一天", "留白的一天", "计划留白"]);
+  const customTitle = String(day.title || "").trim();
+  if (day.titleMode !== "auto" && customTitle && !placeholders.has(customTitle)) {
+    return customTitle;
+  }
+  return deriveDayTitle(activities);
+}
+
+function deriveDayTitle(activities) {
+  if (!activities.length) return "留白的一天";
+  const meaningful = activities.filter((item) => item.category !== "交通");
+  const pool = meaningful.length ? meaningful : activities;
+  const labels = [];
+  for (const activity of pool) {
+    let label = String(activity.title || "")
+      .replace(/[（(][^）)]*[）)]/g, "")
+      .replace(/\s*[+＋]\s*/g, " · ")
+      .trim();
+    label = label.split(" · ")[0].trim();
+    if (label && !labels.includes(label)) labels.push(label);
+    if (labels.length === 2) break;
+  }
+  if (!labels.length) return "今天的安排";
+  if (labels.length === 1) return truncateTitle(labels[0], 14);
+  return `${truncateTitle(labels[0], 6)} · ${truncateTitle(labels[1], 6)}`;
+}
+
+function truncateTitle(value, maxLength) {
+  const text = String(value || "").trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
 function renderUnscheduled(trip) {
@@ -799,6 +842,9 @@ function handleDocumentClick(event) {
     case "edit-trip":
       openEditTrip(selectedTripId);
       break;
+    case "edit-day":
+      openEditDay(Number(actionTarget.dataset.day));
+      break;
     case "add-activity":
       openAddActivity({
         day: Number(actionTarget.dataset.day ?? -1),
@@ -939,12 +985,46 @@ function createTrip(data) {
   return {
     id: makeId("trip"),
     ...data,
-    days: Array.from({ length: dayCount }, (_, index) => ({
-      title: index === 0 ? "出发 · 先慢下来" : index === dayCount - 1 ? "回程 · 留点余量" : "没有计划的一天",
-      note: ""
+    days: Array.from({ length: dayCount }, () => ({
+      title: "",
+      note: "",
+      titleMode: "auto"
     })),
     activities: []
   };
+}
+
+function openEditDay(dayIndex) {
+  const trip = findTrip(selectedTripId);
+  const day = trip?.days?.[dayIndex];
+  if (!trip || !day) return;
+  const activities = trip.activities.filter((item) => item.day === dayIndex);
+  const automaticTitle = deriveDayTitle(activities);
+  openModal(`
+    <div class="sheet-heading"><h2>第 ${dayIndex + 1} 天的标题</h2><p>留空时会根据当天的活动自动生成，设置后则优先显示你的标题。</p></div>
+    <form id="editDayForm" class="form-grid">
+      <label class="field"><span>简短标题</span><input name="title" value="${escapeAttr(day.titleMode === "auto" ? "" : day.title || "")}" placeholder="${escapeAttr(automaticTitle)}" maxlength="18"></label>
+      <label class="field"><span>补充说明（可选）</span><textarea name="note" maxlength="120" placeholder="一句话就够，例如：下午留给海边">${escapeHtml(day.note || "")}</textarea></label>
+      <div class="form-actions">
+        <button class="button button--ghost" type="button" data-close-modal>取消</button>
+        <button class="button button--primary" type="submit">保存标题</button>
+      </div>
+    </form>`, () => {
+    const form = document.getElementById("editDayForm");
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const title = String(data.get("title")).trim();
+      day.title = title;
+      day.titleMode = title ? "custom" : "auto";
+      day.note = String(data.get("note")).trim();
+      notifyCloudMutation("upsert_trip", trip.id);
+      persist();
+      closeModal();
+      saveAndRefresh();
+      showToast(title ? "当天标题已更新" : "已改为根据活动自动生成");
+    });
+  });
 }
 
 function openEditTrip(tripId) {

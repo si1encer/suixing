@@ -1967,6 +1967,54 @@ svg {
   margin-top: 27px;
 }
 
+.day-heading-copy {
+  min-width: 0;
+  width: 100%;
+}
+
+.day-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.day-meta-row .eyebrow {
+  margin: 0;
+}
+
+.day-plan-count {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(200, 215, 204, 0.45);
+  color: var(--green);
+  font-size: 7px;
+}
+
+.day-edit-title {
+  margin-left: auto;
+  padding: 4px 7px;
+  border: 0;
+  border-bottom: 1px solid rgba(73, 101, 88, 0.35);
+  background: transparent;
+  color: var(--green);
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.day-heading-title {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-note-line {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .timeline {
   position: relative;
   display: grid;
