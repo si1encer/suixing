@@ -1,9 +1,10 @@
-const CACHE_NAME = "suixing-v7";
+const CACHE_NAME = "suixing-v8";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./weather.js",
   "./sync.js",
   "./config.js",
   "./schema.sql",

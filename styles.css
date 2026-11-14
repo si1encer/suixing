@@ -2122,6 +2122,54 @@ svg {
 
 .day-meta-row .eyebrow {
   margin: 0;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 25px;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 4px 8px;
+  border: 1px solid rgba(73, 101, 88, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.8);
+  color: var(--ink-soft);
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.weather-chip--ready {
+  border-color: rgba(230, 187, 83, 0.27);
+  background: rgba(245, 230, 185, 0.52);
+  color: #69572d;
+}
+
+.weather-chip--loading {
+  animation: weather-loading 1.2s ease infinite;
+}
+
+.weather-chip--error {
+  color: var(--coral);
+}
+
+.weather-chip--muted {
+  color: var(--ink-soft);
+}
+
+.weather-chip-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+@keyframes weather-loading {
+  50% { opacity: 0.55; }
 }
 
 .day-plan-count {
@@ -2522,6 +2570,187 @@ svg {
   color: var(--green);
   font-size: 8px;
   cursor: pointer;
+}
+
+.weather-location-current {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 10px;
+  padding: 13px;
+  border-radius: 15px;
+  background: rgba(200, 215, 204, 0.43);
+}
+
+.weather-location-current > span {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--green);
+  color: #fffaf0;
+  font-size: 9px;
+}
+
+.weather-location-current div {
+  min-width: 0;
+}
+
+.weather-location-current b,
+.weather-location-current small {
+  display: block;
+}
+
+.weather-location-current b {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-location-current small {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.weather-default-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.weather-default-button > span {
+  display: grid;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--paper-deep);
+  color: var(--green);
+}
+
+.weather-default-button b,
+.weather-default-button small {
+  display: block;
+}
+
+.weather-default-button b {
+  font-size: 10px;
+}
+
+.weather-default-button small {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 8px;
+}
+
+.weather-search-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.weather-search-form .field {
+  flex: 1;
+}
+
+.weather-search-form .button {
+  min-height: 45px;
+  padding: 0 14px;
+}
+
+.weather-results {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.weather-place-result {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.weather-place-result > span:first-child {
+  display: grid;
+  flex: 0 0 29px;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--yellow-soft);
+  color: #6a572b;
+  font-family: "STKaiti", "KaiTi", serif;
+  font-size: 14px;
+}
+
+.weather-place-result > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.weather-place-result b,
+.weather-place-result small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-place-result b {
+  font-size: 10px;
+}
+
+.weather-place-result small {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 7px;
+}
+
+.weather-place-result em {
+  color: var(--green);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.weather-search-status {
+  padding: 13px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  text-align: center;
+}
+
+.weather-attribution {
+  margin: 13px 0 0;
+  color: var(--ink-soft);
+  font-size: 7px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.weather-attribution a {
+  color: var(--green);
 }
 
 .timeline {

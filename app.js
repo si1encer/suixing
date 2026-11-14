@@ -499,6 +499,7 @@ function renderTrip() {
     ${renderUnscheduled(trip)}
     <button class="add-activity-row" type="button" data-action="add-activity" data-day="${ui.currentDay === "all" ? -1 : Number(ui.currentDay)}">＋ 再放一件事进来</button>
     <p class="trip-detail-note">不必全部完成，玩得开心就算成功。</p>`;
+  window.SuixingWeather?.refresh();
 }
 
 function renderDaySection(trip, day, index, busyDays) {
@@ -524,6 +525,7 @@ function renderDaySection(trip, day, index, busyDays) {
         <div class="day-heading-copy">
           <div class="day-meta-row">
             <p class="eyebrow">DAY ${index + 1} · ${escapeHtml(formatMonthDay(date))}</p>
+            ${window.SuixingWeather?.chipMarkup(trip, day, date, index, stays) || `<button class="weather-chip weather-chip--loading" type="button" data-weather-day-index="${index}"><span>☁</span>天气</button>`}
           </div>
           <h2 class="day-heading-title">${escapeHtml(displayTitle)}</h2>
           ${day.note ? `<p class="day-note-line">${escapeHtml(day.note)}</p>` : ""}
@@ -1617,6 +1619,7 @@ function saveAndRefresh() {
   renderProfile();
   updateChrome();
   window.SuixingSync?.refreshUi();
+  window.SuixingWeather?.refresh();
 }
 
 function notifyCloudMutation(kind, tripId, activityId = null) {
